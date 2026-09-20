@@ -1,0 +1,19 @@
+name: Docker Build Check
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    # Pre-download models cache volume (optional, but good if the build takes too long without caching)
+    # The Dockerfile handles downloading, but it's good to make sure docker-compose build works without failing
+    
+    - name: Build with docker-compose
+      run: docker-compose build
