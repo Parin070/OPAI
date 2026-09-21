@@ -22,23 +22,28 @@ def init_bucket():
         error_code = e.response.get("Error", {}).get("Code")
         if error_code == "404":
             s3_client.create_bucket(Bucket=BUCKET_NAME)
-            # Make the bucket public for reading images
-            policy = {
-                "Version": "2012-10-17",
-                "Statement": [
-                    {
-                        "Sid": "PublicRead",
-                        "Effect": "Allow",
-                        "Principal": "*",
-                        "Action": ["s3:GetObject"],
-                        "Resource": [f"arn:aws:s3:::{BUCKET_NAME}/*"]
-                    }
-                ]
-            }
-            import json
-            s3_client.put_bucket_policy(Bucket=BUCKET_NAME, Policy=json.dumps(policy))
         else:
             print(f"Error checking bucket {BUCKET_NAME}: {e}")
+            return
+            
+    # Always ensure the bucket is public for reading images
+    policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "PublicRead",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": ["s3:GetObject"],
+                "Resource": [f"arn:aws:s3:::{BUCKET_NAME}/*"]
+            }
+        ]
+    }
+    import json
+    try:
+        s3_client.put_bucket_policy(Bucket=BUCKET_NAME, Policy=json.dumps(policy))
+    except Exception as e:
+        print(f"Error setting bucket policy: {e}")
 
 def upload_image_to_minio(file_bytes: bytes, filename: str, content_type: str) -> str:
     s3_client.put_object(

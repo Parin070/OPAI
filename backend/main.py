@@ -95,3 +95,11 @@ async def upload_item(
     db.commit()
     db.refresh(item)
     return item
+
+@app.get("/items", response_model=List[schemas.ClothingItemResponse])
+def get_user_items(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    items = db.query(models.ClothingItem).filter(models.ClothingItem.user_id == current_user.id).all()
+    return items
