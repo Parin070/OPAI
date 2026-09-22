@@ -11,6 +11,7 @@ interface ClothingItem {
   color: string;
   pattern: string;
   season: string;
+  formality_score: number | null;
 }
 
 export const Wardrobe = () => {
@@ -144,6 +145,11 @@ export const Wardrobe = () => {
                     {item.season && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
                         {item.season}
+                      </span>
+                    )}
+                    {item.formality_score !== null && item.formality_score !== undefined && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        Formality: {item.formality_score}/10
                       </span>
                     )}
                   </div>
