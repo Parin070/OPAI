@@ -7,9 +7,11 @@ import json
 
 app = FastAPI(title="StyleSync ML Service")
 
+from typing import Any
+
 class AnalyzeResponse(BaseModel):
     embedding: list[float]
-    attributes: dict[str, str]
+    attributes: dict[str, Any]
 
 @app.get("/health")
 def health_check():
@@ -22,7 +24,7 @@ async def analyze_image(
     colors: str = Form(default='["black", "white", "red", "blue", "green", "neutral"]'),
     patterns: str = Form(default='["solid", "striped", "floral", "plaid", "graphic"]'),
     seasons: str = Form(default='["summer", "winter", "spring", "fall"]'),
-    formality: str = Form(default='["casual", "business casual", "formal", "athletic"]')
+    formality: str = Form(default='["very casual", "casual", "smart casual", "business casual", "formal", "very formal"]')
 ):
     # Parse labels
     try:
@@ -57,12 +59,25 @@ async def analyze_image(
         # We can just check which label is in the formatted string, but it's simpler to index
         return next((label for label in label_map if label in best_formatted), "unknown")
 
+    formality_label = get_top(form_preds, form_labels)
+    
+    formality_map = {
+        "very casual": 1.0,
+        "casual": 3.0,
+        "smart casual": 5.0,
+        "business casual": 7.0,
+        "formal": 9.0,
+        "very formal": 10.0
+    }
+    formality_score = formality_map.get(formality_label, 5.0)
+
     attributes = {
         "category": get_top(cat_preds, cat_labels),
         "color": get_top(col_preds, col_labels),
         "pattern": get_top(pat_preds, pat_labels),
         "season": get_top(seas_preds, seas_labels),
-        "formality": get_top(form_preds, form_labels),
+        "formality": formality_label,
+        "formality_score": formality_score
     }
 
     return {
