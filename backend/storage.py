@@ -4,6 +4,7 @@ from botocore.exceptions import ClientError
 from fastapi import UploadFile
 
 MINIO_URL = os.environ.get("MINIO_URL", "http://localhost:9000")
+MINIO_PUBLIC_URL = os.environ.get("MINIO_PUBLIC_URL", "http://localhost:9000")
 MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "minioadmin")
 BUCKET_NAME = "stylesync-images"
@@ -54,4 +55,4 @@ def upload_image_to_minio(file_bytes: bytes, filename: str, content_type: str) -
     )
     # The frontend needs to access it, so return the public URL format
     # Because MinIO handles paths like /bucket_name/filename
-    return f"{MINIO_URL}/{BUCKET_NAME}/{filename}"
+    return f"{MINIO_PUBLIC_URL}/{BUCKET_NAME}/{filename}"
