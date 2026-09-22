@@ -6,6 +6,9 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
 
+class UserUpdate(BaseModel):
+    body_type: Optional[str] = None
+
 class UserResponse(BaseModel):
     id: uuid.UUID
     email: str
