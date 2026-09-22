@@ -64,6 +64,21 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
+@app.patch("/users/me", response_model=schemas.UserResponse)
+def update_users_me(
+    user_update: schemas.UserUpdate,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if user_update.body_type is not None:
+        allowed_types = ["Slim", "Athletic", "Average", "Broad", "Plus-size"]
+        if user_update.body_type not in allowed_types:
+            raise HTTPException(status_code=400, detail=f"Invalid body type. Allowed values are: {', '.join(allowed_types)}")
+        current_user.body_type = user_update.body_type
+        db.commit()
+        db.refresh(current_user)
+    return current_user
+
 @app.post("/items/upload", response_model=schemas.ClothingItemResponse)
 async def upload_item(
     file: UploadFile = File(...),
