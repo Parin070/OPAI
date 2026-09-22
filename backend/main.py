@@ -102,4 +102,13 @@ def get_user_items(
     db: Session = Depends(get_db)
 ):
     items = db.query(models.ClothingItem).filter(models.ClothingItem.user_id == current_user.id).all()
+    
+    # Fix URLs for older items that were saved with internal Docker networking URLs
+    import os
+    internal_url = os.environ.get("MINIO_URL", "http://minio:9000")
+    public_url = os.environ.get("MINIO_PUBLIC_URL", "http://localhost:9000")
+    for item in items:
+        if item.image_url and item.image_url.startswith(internal_url):
+            item.image_url = item.image_url.replace(internal_url, public_url)
+            
     return items
