@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Upload, LogOut, Loader2 } from 'lucide-react';
+import { Upload, LogOut, Loader2, Settings } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -14,21 +14,46 @@ interface ClothingItem {
   formality_score: number | null;
 }
 
+interface User {
+  id: string;
+  email: string;
+  body_type: string | null;
+}
+
+const BODY_TYPES = ["Slim", "Athletic", "Average", "Broad", "Plus-size"];
+
 export const Wardrobe = () => {
   const { token, logout } = useAuth();
   const [items, setItems] = useState<ClothingItem[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [showBodyTypeModal, setShowBodyTypeModal] = useState(false);
+  const [updatingBodyType, setUpdatingBodyType] = useState(false);
 
-  const fetchItems = async () => {
+  const fetchItemsAndUser = async () => {
     try {
-      const res = await fetch(`${API_URL}/items`, {
+      // Fetch User
+      const userRes = await fetch(`${API_URL}/users/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) throw new Error('Failed to fetch items');
-      const data = await res.json();
-      setItems(data);
+      if (!userRes.ok) throw new Error('Failed to fetch user');
+      const userData = await userRes.json();
+      setUser(userData);
+
+      // Force onboarding if body_type is missing
+      if (!userData.body_type) {
+        setShowBodyTypeModal(true);
+      }
+
+      // Fetch Items
+      const itemsRes = await fetch(`${API_URL}/items`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!itemsRes.ok) throw new Error('Failed to fetch items');
+      const itemsData = await itemsRes.json();
+      setItems(itemsData);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -37,7 +62,7 @@ export const Wardrobe = () => {
   };
 
   useEffect(() => {
-    fetchItems();
+    fetchItemsAndUser();
   }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,7 +88,13 @@ export const Wardrobe = () => {
       }
       
       // Refresh items after upload
-      await fetchItems();
+      const itemsRes = await fetch(`${API_URL}/items`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (itemsRes.ok) {
+        const itemsData = await itemsRes.json();
+        setItems(itemsData);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -71,19 +102,93 @@ export const Wardrobe = () => {
     }
   };
 
+  const handleUpdateBodyType = async (bodyType: string) => {
+    setUpdatingBodyType(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_URL}/users/me`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ body_type: bodyType })
+      });
+      
+      if (!res.ok) throw new Error('Failed to update body type');
+      
+      const updatedUser = await res.json();
+      setUser(updatedUser);
+      setShowBodyTypeModal(false);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setUpdatingBodyType(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Body Type Modal Overlay */}
+      {showBodyTypeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to StyleSync!</h2>
+            <p className="text-gray-600 mb-6">
+              To give you the best outfit recommendations, please select your body type.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+              {BODY_TYPES.map((bt) => (
+                <button
+                  key={bt}
+                  disabled={updatingBodyType}
+                  onClick={() => handleUpdateBodyType(bt)}
+                  className={`py-3 px-4 rounded-lg border-2 text-sm font-medium transition-colors
+                    ${user?.body_type === bt 
+                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
+                      : 'border-gray-200 text-gray-700 hover:border-indigo-300 hover:bg-gray-50'
+                    } disabled:opacity-50`}
+                >
+                  {bt}
+                </button>
+              ))}
+            </div>
+            {/* If user already has a body type (e.g. opened via settings), let them close it */}
+            {user?.body_type && (
+              <button
+                onClick={() => setShowBodyTypeModal(false)}
+                className="w-full py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <h1 className="text-2xl font-bold text-gray-900">StyleSync Wardrobe</h1>
-            <button
-              onClick={logout}
-              className="flex items-center text-gray-600 hover:text-gray-900"
-            >
-              <LogOut className="w-5 h-5 mr-2" />
-              Logout
-            </button>
+            <div className="flex items-center space-x-6">
+              {user?.body_type && (
+                <button
+                  onClick={() => setShowBodyTypeModal(true)}
+                  className="flex items-center text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium"
+                  title="Update Body Type"
+                >
+                  <Settings className="w-5 h-5 mr-1.5" />
+                  {user.body_type}
+                </button>
+              )}
+              <button
+                onClick={logout}
+                className="flex items-center text-gray-500 hover:text-gray-900 transition-colors text-sm font-medium"
+              >
+                <LogOut className="w-5 h-5 mr-1.5" />
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </nav>
