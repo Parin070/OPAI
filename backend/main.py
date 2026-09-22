@@ -88,6 +88,7 @@ async def upload_item(
         color=ml_result["attributes"].get("color"),
         pattern=ml_result["attributes"].get("pattern"),
         season=ml_result["attributes"].get("season"),
+        formality_score=ml_result["attributes"].get("formality_score"),
         embedding=ml_result["embedding"]
     )
     
