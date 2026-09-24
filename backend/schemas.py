@@ -37,3 +37,10 @@ class ClothingItemResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+class OutfitScoreRequest(BaseModel):
+    item_ids: List[uuid.UUID]
+
+class OutfitScoreResponse(BaseModel):
+    total_score: float
+    breakdown: Dict[str, float]
