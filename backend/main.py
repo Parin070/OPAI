@@ -11,6 +11,7 @@ import schemas
 import auth
 import storage
 import ml_client
+import scoring
 
 app = FastAPI(title="StyleSync Backend")
 
@@ -128,3 +129,21 @@ def get_user_items(
             item.image_url = item.image_url.replace(internal_url, public_url)
             
     return items
+
+@app.post("/outfits/score", response_model=schemas.OutfitScoreResponse)
+def score_outfit_endpoint(
+    request: schemas.OutfitScoreRequest,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    items = db.query(models.ClothingItem).filter(
+        models.ClothingItem.id.in_(request.item_ids),
+        models.ClothingItem.user_id == current_user.id
+    ).all()
+    
+    # We must retrieve all requested items, otherwise it's invalid or missing
+    if len(items) != len(request.item_ids):
+        raise HTTPException(status_code=400, detail="One or more items not found or not owned by user.")
+        
+    score_result = scoring.score_outfit(items, current_user)
+    return score_result
